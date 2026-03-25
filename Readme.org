@@ -1,0 +1,34 @@
+
+* Commentary
+Bitcoin donations gratefully accepted: 1ArFina3Mi8UDghjarGqATeBgXRDWrsmzo
+
+* Installation
+
+To install without using a package manager:
+
+ - Put the library in a directory in the emacs load path, like ~/.emacs.d/
+ - Add (require 'outline-jb-extras) in your ~/.emacs file
+* Commands & keybindings
+
+ Below is a complete list of commands:
+
+   - *outline-forward-up-heading* :
+    Move up ARG levels and then forward one heading.\\
+    Keybinding: =C-M-# C-S-<down>=
+   - *outshine-toggle-speed-commands* :
+    Toggle the value of  - *outshine-use-speed-commands* :.\\
+    Keybinding: =C-M-# C-S-s=
+   - *outshine-toggle-speed-command-help* :
+    Toggle display of the Outshine speed-command help buffer.\\
+    Keybinding: =M-x outshine-toggle-speed-command-help=
+   - *outshine-add-headers* :
+    Add  - *outshine-mode* : compatible headers at locations in buffer matching regexps.\\
+    Keybinding: =M-x outshine-add-headers=
+
+* Customizable Options
+
+ Below is a list of customizable options:
+
+   - *outshine-user-headers* :
+    List of predefined header specifications for  - *outshine-add-headers* :.\\
+    default value: =nil=

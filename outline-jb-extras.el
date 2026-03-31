@@ -163,6 +163,9 @@ and QUERY should be non-nil if the user is to be queried for each header inserti
 		   (list (let (hdrs regex title depth)
 			   (while (not (string-empty-p
 					(setq regex
+					      ;;TODO: make the function for reading a regexp a user option so that
+					      ;; something like visual-regexp.el or a function in regex-collection.el
+					      ;; can be used if they want
 					      (read-string
 					       "Regexp matching line directly after header (empty to finish): "))))
 			     (setq title (read-string "Header title (may contain references to groups): "))
@@ -194,6 +197,8 @@ and QUERY should be non-nil if the user is to be queried for each header inserti
 	  (funcall (if query 'query-replace-regexp 'replace-regexp)
 		   match (concat repl "\n\\&"))))))
   (outshine-mode 1)
+  (if (not (equal outline-heading-end-regexp "\n"))
+      (warn "`outline-heading-end-regexp' is not equal to \"\\\\n\", this may cause problems"))
   (when (called-interactively-p 'any)
     (goto-char (point-min))
     (outline-next-visible-heading 1)))

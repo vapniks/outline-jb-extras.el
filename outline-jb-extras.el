@@ -200,6 +200,8 @@ and QUERY should be non-nil if the user is to be queried for each header inserti
   (if (not (equal outline-heading-end-regexp "\n"))
       (warn "`outline-heading-end-regexp' is not equal to \"\\\\n\", this may cause problems"))
   (when (called-interactively-p 'any)
+    (when (y-or-n-p "Add file local variable to start `outshine-mode' automatically when file is revisited?")
+      (add-file-local-variable 'eval '(outshine-mode 1)))
     (goto-char (point-min))
     (outline-next-visible-heading 1)))
 

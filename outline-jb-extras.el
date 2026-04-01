@@ -133,18 +133,23 @@ Each element has the form:
 DESCRIPTION is a string naming the header set.
 HEADERS is a list of triplets of the form:
 
-  (MATCH TITLE DEPTH)
+  (MATCH TITLE DEPTH LOCATION)
 
-MATCH is a regexp matching text before which a header should be inserted.
-TITLE is the string used as the header title.
-DEPTH is a positive integer specifying the depth of the header to create.
+MATCH    is a regexp matching lines where headers should be placed.
+TITLE    is the string used as the header title.
+DEPTH    is a positive integer specifying the depth of the header to create.
+LOCATION indicates where the original line should be placed relative to the header
+         is can be one of \"before\", \"after\" or \"replace\"
 
 MATCH may contain regexp groups which can be referenced in TITLE."
   :group 'outshine
   :type '(repeat (list (string :tag "Description")
 		       (repeat (list (regexp :tag "Match regexp")
 				     (string :tag "Title")
-				     (integer :tag "Depth"))))))
+				     (integer :tag "Depth")
+				     (choice (const "replace")
+					     (const "after")
+					     (const "before")))))))
 ;;;###autoload
 (defun outshine-add-headers (hdrs &optional query)
   "Add `outshine-mode' compatible headers at locations in buffer matching regexps.
@@ -160,17 +165,22 @@ and QUERY should be non-nil if the user is to be queried for each header inserti
 		      hdrs)
 		 (if (and choice (not (string= choice "NEW")))
 		     (list (cadr (assoc choice saved)) t)
-		   (list (let (hdrs regex title depth)
+		   (list (let (hdrs regex title depth loc)
 			   (while (not (string-empty-p
 					(setq regex
 					      ;;TODO: make the function for reading a regexp a user option so that
 					      ;; something like visual-regexp.el or a function in regex-collection.el
 					      ;; can be used if they want
 					      (read-string
-					       "Regexp matching line directly after header (empty to finish): "))))
-			     (setq title (read-string "Header title (may contain references to groups): "))
+					       "Regexp matching lines where header should be placed (empty to finish): "))))
+			     (setq title
+				   (read-string
+				    "Header title (use \\N for Nth match group, default is \\& = original line): "
+				    nil nil "\\&"))
 			     (setq depth (read-number "Depth (positive integer): " nil t))
-			     (push (list regex title depth) hdrs))
+			     (setq loc (completing-read "Where to place original line: "
+							'("replace" "after" "before")))
+			     (push (list regex title depth loc) hdrs))
 			   (when (and hdrs
 				      (y-or-n-p "Save this triplet list in `outshine-user-headers'? "))
 			     (let ((description (read-string "Description: ")))
@@ -183,19 +193,30 @@ and QUERY should be non-nil if the user is to be queried for each header inserti
 			 t))))
   (save-excursion
     (dolist (hdr hdrs)
-      (cl-destructuring-bind (match title nstars) hdr
-	(goto-char (point-max))
+      (cl-destructuring-bind (match title nstars loc) hdr
 	(let ((repl (concat (string-trim-right comment-start) " "
 			    (make-string nstars ?*)
 			    " " title)))
-	  (or (and (re-search-backward (replace-regexp-in-string "\\\\[0-9]" ".*" repl)
-				       (point-min) t)
-		   (forward-line 1)
-		   (looking-at match)
-		   (forward-line 1))
-	      (goto-char (point-min)))
+	  ;; make sure we match entire line
+	  (unless (= (elt match 0) ?^)
+	    (setq match (concat "^.*" match)))
+	  (unless (= (elt match (1- (length match))) ?$)
+	    (setq match (concat match ".*$")))
+	  ;; move point past last pre-existing matching header
+	  ;; (in case we're adding more headers to a buffer that has been appended to)
+	  (goto-char (point-max))
+	  (if (not (re-search-backward (replace-regexp-in-string "\\\\[0-9]" ".*" repl)
+				       (point-min) t))
+	      (goto-char (point-min))
+	    (forward-line 1)
+	    (if (and (equal loc "after")
+		     (looking-at match))
+		(forward-line 1)))
+	  ;; now perform the actual replacements
 	  (funcall (if query 'query-replace-regexp 'replace-regexp)
-		   match (concat repl "\n\\&"))))))
+		   match (cond ((equal loc "after") (concat repl "\n\\&"))
+			       ((equal loc "before") (concat "\\&\n" repl))
+			       ((equal loc "replace") repl)))))))
   (outshine-mode 1)
   (if (not (equal outline-heading-end-regexp "\n"))
       (warn "`outline-heading-end-regexp' is not equal to \"\\\\n\", this may cause problems"))
